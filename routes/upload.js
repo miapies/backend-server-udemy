@@ -117,10 +117,12 @@ function validarYGuardar(model, id, nombreArchivo, res, nombreColeccion, tipoMod
             });
         }
 
-        var pathViejo = `./uploads/${nombreColeccion}/${data.img}`;
-        // Si existe elimina la imagen anterior
-        if (fs.existsSync(pathViejo)) {
-            fs.unlinkSync(pathViejo);
+        if (data.img && data.img.length > 0) {
+            var pathViejo = `./uploads/${nombreColeccion}/${data.img}`;
+            // Si existe elimina la imagen anterior
+            if (fs.existsSync(pathViejo)) {
+                fs.unlinkSync(pathViejo);
+            }
         }
 
         data.img = nombreArchivo;

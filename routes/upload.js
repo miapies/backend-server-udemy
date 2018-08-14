@@ -8,6 +8,7 @@ var app = express();
 var Usuario = require('../models/usuario');
 var Medico = require('../models/medico');
 var Hospital = require('../models/hospital');
+var Imagen = require('../models/imagen');
 
 // default options
 app.use(fileUpload());
@@ -57,31 +58,36 @@ app.put('/:tipo/:id', (req, res) => {
     var nombreArchivo = `${id}-${new Date().getMilliseconds()}.${extension}`;
 
     // Mover el archivo del temporal a un path
-    var path = `./uploads/${tipo}/${nombreArchivo}`;
+    // var path = `./uploads/${tipo}/${nombreArchivo}`;
 
-    archivo.mv(path, err => {
-        if (err) {
-            return res.status(500).json({
-                ok: false,
-                mensaje: 'Error al mover archivo',
-                errors: err
-            });
-        }
+    // archivo.mv(path, err => {
+    //     if (err) {
+    //         return res.status(500).json({
+    //             ok: false,
+    //             mensaje: 'Error al mover archivo',
+    //             errors: err
+    //         });
+    //     }
 
-        subirPorTipo(tipo, id, nombreArchivo, res);
-    });
+    //     subirPorTipo(tipo, id, nombreArchivo, res);
+    // });
 
+    // Guardamos las imágenes en la BBDD Mongo en vez de en un directorio
+    subirPorTipo(tipo, id, nombreArchivo, archivo, res);
 });
 
-function subirPorTipo(tipo, id, nombreArchivo, res) {
+function subirPorTipo(tipo, id, nombreArchivo, archivo, res) {
     if (tipo === 'usuarios') {
-        return validarYGuardar(Usuario, id, nombreArchivo, res, 'usuarios', 'usuario');
+        // return validarYGuardar(Usuario, id, nombreArchivo, res, 'usuarios', 'usuario');
+        return guardarEnBBDD(Usuario, id, nombreArchivo, archivo, res, 'usuario');
     }
     if (tipo === 'medicos') {
-        return validarYGuardar(Medico, id, nombreArchivo, res, 'medicos', 'medico');
+        // return validarYGuardar(Medico, id, nombreArchivo, res, 'medicos', 'medico');
+        return guardarEnBBDD(Medico, id, nombreArchivo, archivo, res, 'medico');
     }
     if (tipo === 'hospitales') {
-        return validarYGuardar(Hospital, id, nombreArchivo, res, 'hospitales', 'hospital');
+        // return validarYGuardar(Hospital, id, nombreArchivo, res, 'hospitales', 'hospital');
+        return guardarEnBBDD(Hospital, id, nombreArchivo, archivo, res, 'hospital');
     }
 }
 
@@ -153,6 +159,98 @@ function validarYGuardar(model, id, nombreArchivo, res, nombreColeccion, tipoMod
             });
 
         });
+    });
+
+}
+
+function guardarEnBBDD(model, id, nombreArchivo, archivo, res, tipoModel) {
+
+    model.findById(id, (err, data) => {
+
+        if (err) {
+            return res.status(500).json({
+                ok: false,
+                mensaje: `Error al buscar ${tipoModel}`,
+                errors: err
+            });
+        }
+
+        if (!data) {
+            return res.status(400).json({
+                ok: false,
+                mensaje: `El ${tipoModel} con el id ${id} no existe`,
+                errors: { message: `No existe un ${tipoModel} con ese ID` }
+            });
+        }
+
+        if (data.img && data.img.length > 0) {
+            // Si existe se actualiza la imagen anterior
+            var photo = new Imagen({
+                _id: data.img,
+                filename: nombreArchivo,
+                file: archivo.data
+            });
+
+            Imagen.findByIdAndUpdate(data.img, photo, (err) => {
+                if (err) {
+                    return res.status(400).json({
+                        ok: false,
+                        mensaje: 'Error al actualizar imagen',
+                        errors: err
+                    });
+                }
+
+                res.status(200).json({
+                    ok: true,
+                    mensaje: `Imagen de ${tipoModel} actualizada'`,
+                    [tipoModel]: data
+                });
+
+            });
+        } else {
+            // Si no existe se crea un nuevo registro y
+            // se actualiza el model
+            var nuevaFoto = new Imagen({
+                filename: nombreArchivo,
+                file: archivo.data
+            });
+
+            nuevaFoto.save((err, imagenGuardada) => {
+                if (err) {
+                    return res.status(400).json({
+                        ok: false,
+                        mensaje: 'Error al crear imagen',
+                        errors: err
+                    });
+                }
+
+                data.img = imagenGuardada._id;
+
+                data.save((err, dataActualizada) => {
+
+                    if (err) {
+                        return res.status(500).json({
+                            ok: false,
+                            mensaje: `Error al actualizar imagen de ${tipoModel}`,
+                            errors: err
+                        });
+                    }
+
+                    if (dataActualizada.password) {
+                        dataActualizada.password = ':)';
+                    }
+
+                    return res.status(200).json({
+                        ok: true,
+                        mensaje: `Imagen de ${tipoModel} actualizada'`,
+                        [tipoModel]: dataActualizada
+                    });
+
+                });
+
+            });
+        }
+
     });
 
 }

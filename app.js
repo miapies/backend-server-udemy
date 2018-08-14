@@ -3,9 +3,11 @@ var express = require('express');
 var mongoose = require('mongoose');
 var bodyParser = require('body-parser');
 
+// Obtenemos el puerto del enviroment para otros servidores
+var port = process.env.PORT || 3000;
+
 // Inicializar variables
 var app = express();
-
 
 // Forma simple de configurar el CORS en ExpressJS 
 // que no requiere instalación de ningún paquete
@@ -59,6 +61,6 @@ app.use('/img', imagenesRoutes);
 app.use('/', appRoutes);
 
 // Escuchar peticiones
-app.listen(3000, () => {
-    console.log('Express server puerto 3000: \x1b[32m%s\x1b[0m', 'online');
+app.listen(port, () => {
+    console.log('Express server puerto %s: \x1b[32m%s\x1b[0m', port, 'online');
 });

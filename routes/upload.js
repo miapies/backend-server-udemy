@@ -184,75 +184,69 @@ function guardarEnBBDD(model, id, nombreArchivo, archivo, res, tipoModel) {
         }
 
         if (data.img && data.img.length > 0 && !data.img.startsWith('https')) {
-            // Si existe se actualiza la imagen anterior
-            var photo = new Imagen({
-                _id: data.img,
-                filename: nombreArchivo,
-                file: archivo.data
-            });
-
-            Imagen.findByIdAndUpdate(data.img, photo, (err) => {
+            // Si existe borramos la imagen anterior y creamos una nueva
+            Imagen.findByIdAndRemove(data.img, (err) => {
                 if (err) {
-                    return res.status(400).json({
+                    return res.status(500).json({
                         ok: false,
-                        mensaje: 'Error al actualizar imagen',
+                        mensaje: 'Error al borrar imagen',
                         errors: err
                     });
                 }
 
-                res.status(200).json({
-                    ok: true,
-                    mensaje: `Imagen de ${tipoModel} actualizada'`,
-                    [tipoModel]: data
-                });
-
+                crearImagen(nombreArchivo, archivo, res, tipoModel, data);
             });
+
         } else {
-            // Si no existe se crea un nuevo registro y
-            // se actualiza el model
-            var nuevaFoto = new Imagen({
-                filename: nombreArchivo,
-                file: archivo.data
-            });
-
-            nuevaFoto.save((err, imagenGuardada) => {
-                if (err) {
-                    return res.status(400).json({
-                        ok: false,
-                        mensaje: 'Error al crear imagen',
-                        errors: err
-                    });
-                }
-
-                data.img = imagenGuardada._id;
-
-                data.save((err, dataActualizada) => {
-
-                    if (err) {
-                        return res.status(500).json({
-                            ok: false,
-                            mensaje: `Error al actualizar imagen de ${tipoModel}`,
-                            errors: err
-                        });
-                    }
-
-                    if (dataActualizada.password) {
-                        dataActualizada.password = ':)';
-                    }
-
-                    return res.status(200).json({
-                        ok: true,
-                        mensaje: `Imagen de ${tipoModel} actualizada'`,
-                        [tipoModel]: dataActualizada
-                    });
-
-                });
-
-            });
+            crearImagen(nombreArchivo, archivo, res, tipoModel, data);
         }
 
     });
 
+}
+
+function crearImagen(nombreArchivo, archivo, res, tipoModel, data) {
+    // Si no existe se crea un nuevo registro y
+    // se actualiza el model
+    var nuevaFoto = new Imagen({
+        filename: nombreArchivo,
+        file: archivo.data
+    });
+
+    nuevaFoto.save((err, imagenGuardada) => {
+        if (err) {
+            return res.status(500).json({
+                ok: false,
+                mensaje: 'Error al crear imagen',
+                errors: err
+            });
+        }
+
+        data.img = imagenGuardada._id;
+
+        data.save((err, dataActualizada) => {
+
+            if (err) {
+                return res.status(500).json({
+                    ok: false,
+                    mensaje: `Error al actualizar imagen de ${tipoModel}`,
+                    errors: err
+                });
+            }
+
+            if (dataActualizada.password) {
+                dataActualizada.password = ':)';
+            }
+
+            return res.status(200).json({
+                ok: true,
+                mensaje: `Imagen de ${tipoModel} actualizada'`,
+                [tipoModel]: dataActualizada
+            });
+
+        });
+
+    });
 }
 
 module.exports = app;

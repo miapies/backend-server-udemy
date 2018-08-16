@@ -183,7 +183,7 @@ function guardarEnBBDD(model, id, nombreArchivo, archivo, res, tipoModel) {
             });
         }
 
-        if (data.img && data.img.length > 0) {
+        if (data.img && data.img.length > 0 && !data.img.startsWith('https')) {
             // Si existe se actualiza la imagen anterior
             var photo = new Imagen({
                 _id: data.img,

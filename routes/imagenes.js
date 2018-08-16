@@ -1,6 +1,6 @@
 var express = require('express');
 
-var Imagen = require('../models/imagen')
+var Imagen = require('../models/imagen');
 
 var app = express();
 
